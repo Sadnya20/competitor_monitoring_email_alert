@@ -10,6 +10,22 @@ from webdriver_manager.chrome import ChromeDriverManager
 import smtplib
 from email.mime.text import MIMEText
 import os
+# Importing necessary libraries
+from dotenv import load_dotenv
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Get environment variables
+email_sender = os.getenv("EMAIL_SENDER")
+email_password = os.getenv("EMAIL_PASSWORD")
+email_receiver = os.getenv("EMAIL_RECEIVER")
+
+# Your other code follows here...
 
 # === Email Alert Function ===
 def send_email_alert(product_name, our_price, ebay_price, new_price):
