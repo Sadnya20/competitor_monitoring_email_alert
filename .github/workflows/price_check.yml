@@ -1,8 +1,9 @@
+
 name: Daily Price Monitor
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # Runs daily at 4 AM UTC
+    - cron: '0 4 * * *'  # Runs daily at 4 AM UTC (adjust to your time zone if necessary)
   workflow_dispatch:     # Allows manual run
 
 jobs:
@@ -30,9 +31,12 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
+          GOOGLE_SHEET_CREDS: ${{ secrets.GOOGLE_SHEET_CREDS }}  # If needed for Sheets
         run: |
           python monitor_price.py
-
 # name: Daily Price Monitor
 
 # on:
@@ -67,3 +71,5 @@ jobs:
 #           DB_NAME: ${{ secrets.DB_NAME }}
 #         run: |
 #           python monitor_price.py
+
+
