@@ -1,3 +1,4 @@
+
 import re
 import time
 from datetime import datetime
@@ -12,6 +13,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 import os
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -100,6 +103,9 @@ def get_ebay_price(url):
 cursor.execute("SELECT product_id, product_name, our_price, ebay_url FROM products")
 products = cursor.fetchall()
 
+# Create a list to store data for Google Sheets
+product_list = []
+
 for product in products:
     product_id, product_name, our_price, ebay_url = product
     print(f"\n🔍 Checking: {product_name} (ID: {product_id})")
@@ -122,7 +128,7 @@ for product in products:
             db.commit()
 
             # Log the price change
-            cursor.execute("""
+            cursor.execute(""" 
                 INSERT INTO price_change_log (product_id, old_price, new_price, ebay_price, updated_at)
                 VALUES (%s, %s, %s, %s, %s)
             """, (product_id, our_price, new_price, ebay_price, datetime.now()))
@@ -135,11 +141,35 @@ for product in products:
     else:
         print("   ✅ Our price is competitive.")
 
+    # Collect product data for Google Sheets
+    product_list.append({
+        "product": product_name,
+        "ebay_price": ebay_price,
+        "internal_price": our_price
+    })
+
+# === PUSH FINAL DATA TO GOOGLE SHEETS ===
+SERVICE_ACCOUNT_FILE = 'PATH_TO_YOUR_JSON_FILE.json'  # Replace with correct path
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+client = gspread.authorize(creds)
+sheet = client.open("Competitor Price Monitor").sheet1
+
+sheet.clear()
+headers = ["Product", "eBay Price", "Internal Price"]
+sheet.append_row(headers)
+
+# Push data from product_list to Google Sheets
+for item in product_list:
+    row = [item['product'], item['ebay_price'], item['internal_price']]
+    sheet.append_row(row)
+
+print("✅ Data pushed to Google Sheet.")
+
 # === Cleanup ===
 driver.quit()
 cursor.close()
 db.close()
-
 # import re
 # import time
 # from datetime import datetime
@@ -151,30 +181,27 @@ db.close()
 # from webdriver_manager.chrome import ChromeDriverManager
 # import smtplib
 # from email.mime.text import MIMEText
-# import os
-# # Importing necessary libraries
+# from email.mime.multipart import MIMEMultipart
 # from dotenv import load_dotenv
 # import os
-# import smtplib
-# from email.mime.text import MIMEText
-# from email.mime.multipart import MIMEMultipart
 
 # # Load environment variables from the .env file
 # load_dotenv()
 
-# # Get environment variables
+# # Get environment variables for email
 # email_sender = os.getenv("EMAIL_SENDER")
 # email_password = os.getenv("EMAIL_PASSWORD")
 # email_receiver = os.getenv("EMAIL_RECEIVER")
 
-# # Your other code follows here...
+# # Get environment variables for database credentials
+# db_host = os.getenv("DB_HOST")
+# db_port = int(os.getenv("DB_PORT"))
+# db_user = os.getenv("DB_USER")
+# db_password = os.getenv("DB_PASSWORD")
+# db_name = os.getenv("DB_NAME")
 
 # # === Email Alert Function ===
 # def send_email_alert(product_name, our_price, ebay_price, new_price):
-#     sender_email = os.environ['ALERT_SENDER_EMAIL']
-#     receiver_email = os.environ['ALERT_RECEIVER_EMAIL']
-#     app_password = os.environ['ALERT_APP_PASSWORD']
-
 #     subject = f"Price Drop Alert: {product_name}"
 #     body = f"""
 #     Product: {product_name}
@@ -187,13 +214,13 @@ db.close()
 
 #     msg = MIMEText(body)
 #     msg['Subject'] = subject
-#     msg['From'] = sender_email
-#     msg['To'] = receiver_email
+#     msg['From'] = email_sender
+#     msg['To'] = email_receiver
 
 #     try:
 #         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-#             server.login(sender_email, app_password)
-#             server.sendmail(sender_email, receiver_email, msg.as_string())
+#             server.login(email_sender, email_password)
+#             server.sendmail(email_sender, email_receiver, msg.as_string())
 #         print("   📧 Email alert sent.")
 #     except Exception as e:
 #         print(f"   ❌ Failed to send email: {e}")
@@ -207,11 +234,11 @@ db.close()
 
 # # === Use environment variables for database credentials ===
 # db = mysql.connector.connect(
-#     host=os.environ['DB_HOST'],
-#     port=int(os.environ['DB_PORT']),
-#     user=os.environ['DB_USER'],
-#     password=os.environ['DB_PASSWORD'],
-#     database=os.environ['DB_NAME']
+#     host=db_host,
+#     port=db_port,
+#     user=db_user,
+#     password=db_password,
+#     database=db_name
 # )
 # cursor = db.cursor()
 
